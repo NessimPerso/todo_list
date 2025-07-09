@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { TasksModule } from './task/task.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { TasksModule } from './task/task.module';
       logging: true
     }),
     UserModule,// Importation du module User
-    TasksModule, // Importation du module Task
+    TasksModule, AuthModule, // Importation du module Task
   ],
   controllers: [AppController],
   providers: [AppService],
