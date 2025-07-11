@@ -13,5 +13,11 @@ export class AuthController {
         if (!token) throw new UnauthorizedException('Invalid credentials');
         return { access_token: token };
     }
+
+    @Post('register')
+    async register(@Body() createUserDto: CreateUserDto) {
+        const user = await this.authService.register(createUserDto);
+        return { message: 'User registered successfully', userId: user.id };
+    }
     
 }
