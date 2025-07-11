@@ -1,6 +1,6 @@
 # Libheros Task Manager
 
-Application de gestion de tâches développée pour le test technique Libheros.
+Application de gestion de tâches développée.
 
 ## 🚀 Stack Technique
 
