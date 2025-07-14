@@ -52,33 +52,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('AuthContext: Tentative de connexion...');
       const response: AuthResponse = await authService.login({ email, password });
-      
-      console.log('AuthContext: Connexion réussie, réponse:', response);
-      
+            
       // Mise à jour immédiate du contexte avec les données de la réponse
       setUser(response.user);
-      
-      console.log('AuthContext: Utilisateur défini:', response.user);
-      
+
     } catch (error) {
-      console.error('AuthContext: Erreur de connexion:', error);
       throw error;
     }
   };
 
   const register = async (data: any) => {
     try {
-      console.log('AuthContext: Tentative d\'inscription...');
+
       const response: AuthResponse = await authService.register(data);
       
-      console.log('AuthContext: Inscription réussie, réponse:', response);
       
       // Mise à jour immédiate du contexte avec les données de la réponse
       setUser(response.user);
-      
-      console.log('AuthContext: Utilisateur défini:', response.user);
       
     } catch (error) {
       console.error('AuthContext: Erreur d\'inscription:', error);
@@ -87,7 +78,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    console.log('AuthContext: Déconnexion...');
     authService.logout();
     setUser(null);
   };

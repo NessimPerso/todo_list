@@ -29,7 +29,6 @@ export const authService = {
     try {
       const response = await api.post<any>('/auth/login', data); // Changé de AuthResponse à any
       
-      console.log('API Response:', response.data); // Debug log
       
       // Stocker le token dans le localStorage
       tokenService.setToken(response.data.access_token);
@@ -113,7 +112,6 @@ export const authService = {
 
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log('Token payload:', payload); // Debug log ajouté
       return {
         id: payload.sub,
         email: payload.email,
