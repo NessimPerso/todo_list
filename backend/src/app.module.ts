@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { TasksModule } from './task/task.module';
 import { AuthModule } from './auth/auth.module';
+import { TaskListModule } from './tasklist/tasklist.module';
 
 @Module({
   imports: [
@@ -24,7 +25,9 @@ import { AuthModule } from './auth/auth.module';
       logging: true
     }),
     UserModule,// Importation du module User
-    TasksModule, AuthModule, // Importation du module Task
+    TasksModule, // Importation du module Task
+    TaskListModule, // Importation du module TaskList
+    AuthModule, 
   ],
   controllers: [AppController],
   providers: [AppService],
