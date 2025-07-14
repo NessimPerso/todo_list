@@ -25,7 +25,7 @@ export default function NewTaskForm({ onCancel, onSuccess }: Props) {
     if (!shortDescription || !dueDate) return;
 
     try {
-      const success = createTask({
+      const success = await createTask({
         shortDescription,
         longDescription,
         dueDate

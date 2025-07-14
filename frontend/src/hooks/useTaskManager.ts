@@ -1,12 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Task, TaskList } from '../types/task.types';
-import { generateId } from '../utils/helpers';
+import api from '../services/api';
 
 export const useTaskManager = () => {
-  const [lists, setLists] = useState<TaskList[]>([
-    { id: 1, name: 'Travail', tasks: [] },
-    { id: 2, name: 'Personnel', tasks: [] }
-  ]);
+  const [lists, setLists] = useState<TaskList[]>([]);
   const [selectedList, setSelectedList] = useState<TaskList | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
@@ -22,175 +19,213 @@ export const useTaskManager = () => {
     title: '',
     message: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Charger les listes au démarrage
+  useEffect(() => {
+    const loadLists = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.get('/tasklists');
+        const safeLists = response.data.map((list: any) => ({
+          ...list,
+          tasks: Array.isArray(list.tasks) ? list.tasks : []
+        }));
+        setLists(safeLists);
+      } catch (err) {
+        setError('Failed to load lists');
+        console.error('Error loading lists:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadLists();
+  }, []);
 
   // Créer une nouvelle liste
-  const createList = useCallback((name: string) => {
+  const createList = useCallback(async (name: string) => {
     const trimmedName = name.trim();
-    if (trimmedName && !lists.find(l => l.name === trimmedName)) {
-      const newList: TaskList = {
-        id: generateId(),
-        name: trimmedName,
-        tasks: []
+    if (!trimmedName) return false;
+
+    setIsLoading(true);
+    try {
+      const response = await api.post('/tasklists', { name: trimmedName });
+      const newList = {
+        ...response.data,
+        tasks: Array.isArray(response.data.tasks) ? response.data.tasks : []
       };
+      
       setLists(prev => [...prev, newList]);
       return true;
+    } catch (err) {
+      setError('Failed to create list');
+      console.error('Error creating list:', err);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
-    return false;
-  }, [lists]);
+  }, []);
 
   // Supprimer une liste
-  const deleteList = useCallback((listId: string | number) => {
-    setLists(prev => prev.filter(l => l.id !== listId));
-    if (selectedList?.id === listId) {
-      setSelectedList(null);
-      setSelectedTask(null);
+  const deleteList = useCallback(async (listId: string | number) => {
+    setIsLoading(true);
+    try {
+      await api.delete(`/tasklists/${listId}`);
+      
+      setLists(prev => prev.filter(list => list.id !== listId));
+      
+      if (selectedList?.id === listId) {
+        setSelectedList(null);
+        setSelectedTask(null);
+      }
+      
+      return true;
+    } catch (err) {
+      setError('Failed to delete list');
+      console.error('Error deleting list:', err);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   }, [selectedList]);
 
-  // Confirmer la suppression d'une liste
-  const confirmDeleteList = useCallback((list: TaskList) => {
-    setDeleteModalData({
-      type: 'list',
-      item: list,
-      title: 'Confirmer la suppression',
-      message: `Êtes-vous sûr de vouloir supprimer la liste "${list.name}" ? Toutes les tâches associées seront également supprimées.`
-    });
-    setShowDeleteModal(true);
-  }, []);
-
-  // Créer une nouvelle tâche
-  const createTask = useCallback((taskData: {
+  // Créer une tâche
+  const createTask = useCallback(async (taskData: {
     shortDescription: string;
     longDescription: string;
     dueDate: string;
   }) => {
-    if (!selectedList || !taskData.shortDescription.trim() || !taskData.dueDate) {
+    if (!selectedList?.id || !taskData.shortDescription.trim() || !taskData.dueDate) {
       return false;
     }
 
-    const newTask: Task = {
-      id: generateId(),
-      shortDescription: taskData.shortDescription.trim(),
-      longDescription: taskData.longDescription.trim(),
-      dueDate: taskData.dueDate,
-      completed: false,
-      createdAt: new Date().toISOString()
-    };
+    setIsLoading(true);
+    try {
+      const payload = {
+        ...taskData,
+        dueDate: new Date(taskData.dueDate).toISOString(),
+        taskListId: String(selectedList.id)
+      };
 
-    const updatedLists = lists.map(list =>
-      list.id === selectedList.id
-        ? { ...list, tasks: [...list.tasks, newTask] }
-        : list
-    );
+      const response = await api.post('/tasks', payload);
+      const newTask = response.data;
 
-    setLists(updatedLists);
-    setSelectedList(updatedLists.find(l => l.id === selectedList.id) || null);
-    return true;
+      const updatedLists = lists.map(list => 
+        list.id === selectedList.id
+          ? { 
+              ...list, 
+              tasks: Array.isArray(list.tasks) 
+                ? [...list.tasks, newTask] 
+                : [newTask] 
+            }
+          : list
+      );
+
+      setLists(updatedLists);
+      setSelectedList(updatedLists.find(l => l.id === selectedList.id) || null);
+      return true;
+    } catch (err) {
+      setError('Failed to create task');
+      console.error('Error creating task:', err);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   }, [selectedList, lists]);
 
   // Basculer l'état d'une tâche
-  const toggleTaskCompletion = useCallback((taskId: string | number) => {
-    if (!selectedList) return;
+  const toggleTaskCompletion = useCallback(async (taskId: string | number) => {
+    if (!selectedList?.id) return;
 
-    const updatedLists = lists.map(list =>
-      list.id === selectedList.id
-        ? {
+    setIsLoading(true);
+    try {
+      await api.patch(`/tasks/${taskId}/toggle-completed`);
+      
+      const updatedLists = lists.map(list => {
+        if (list.id === selectedList.id) {
+          return {
             ...list,
-            tasks: list.tasks.map(task =>
-              task.id === taskId ? { ...task, completed: !task.completed } : task
+            tasks: (Array.isArray(list.tasks) ? list.tasks : []).map(task => 
+              task.id === taskId 
+                ? { ...task, completed: !task.completed } 
+                : task
             )
-          }
-        : list
-    );
+          };
+        }
+        return list;
+      });
 
-    setLists(updatedLists);
-    const updatedSelectedList = updatedLists.find(l => l.id === selectedList.id);
-    setSelectedList(updatedSelectedList || null);
-
-    // Mettre à jour la tâche sélectionnée si c'est celle qui a été modifiée
-    if (selectedTask?.id === taskId && updatedSelectedList) {
-      const updatedTask = updatedSelectedList.tasks.find(t => t.id === taskId);
-      setSelectedTask(updatedTask || null);
+      setLists(updatedLists);
+      
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(prev => 
+          prev?.id === taskId 
+            ? { ...prev, completed: !prev.completed } 
+            : prev
+        );
+      }
+    } catch (err) {
+      setError('Failed to toggle task status');
+      console.error('Error toggling task:', err);
+    } finally {
+      setIsLoading(false);
     }
   }, [selectedList, lists, selectedTask]);
 
   // Supprimer une tâche
-  const deleteTask = useCallback((taskId: string | number) => {
-    if (!selectedList) return;
+  const deleteTask = useCallback(async (taskId: string | number) => {
+    if (!selectedList?.id) return false;
 
-    const updatedLists = lists.map(list =>
-      list.id === selectedList.id
-        ? { ...list, tasks: list.tasks.filter(task => task.id !== taskId) }
-        : list
-    );
+    setIsLoading(true);
+    try {
+      await api.delete(`/tasks/${taskId}`);
+      
+      const updatedLists = lists.map(list => {
+        if (list.id === selectedList.id) {
+          return {
+            ...list,
+            tasks: (Array.isArray(list.tasks) ? list.tasks : []).filter(task => task.id !== taskId)
+          };
+        }
+        return list;
+      });
 
-    setLists(updatedLists);
-    setSelectedList(updatedLists.find(l => l.id === selectedList.id) || null);
-    
-    if (selectedTask?.id === taskId) {
-      setSelectedTask(null);
+      setLists(updatedLists);
+      
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(null);
+      }
+      
+      return true;
+    } catch (err) {
+      setError('Failed to delete task');
+      console.error('Error deleting task:', err);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   }, [selectedList, lists, selectedTask]);
 
-  // Confirmer la suppression d'une tâche
-  const confirmDeleteTask = useCallback((task: Task) => {
-    setDeleteModalData({
-      type: 'task',
-      item: task,
-      title: 'Confirmer la suppression',
-      message: 'Êtes-vous sûr de vouloir supprimer cette tâche ?'
-    });
-    setShowDeleteModal(true);
-  }, []);
-
-  // Gérer la confirmation de suppression
-  const handleDeleteConfirm = useCallback(() => {
-    if (deleteModalData.item) {
-      if (deleteModalData.type === 'list') {
-        deleteList(deleteModalData.item.id);
-      } else if (deleteModalData.type === 'task') {
-        deleteTask(deleteModalData.item.id);
-      }
-    }
-    setShowDeleteModal(false);
-    setDeleteModalData({
-      type: 'list',
-      item: null,
-      title: '',
-      message: ''
-    });
-  }, [deleteModalData, deleteList, deleteTask]);
-
-  // Fermer le modal de suppression
-  const handleDeleteCancel = useCallback(() => {
-    setShowDeleteModal(false);
-    setDeleteModalData({
-      type: 'list',
-      item: null,
-      title: '',
-      message: ''
-    });
-  }, []);
-
   // Sélectionner une liste
   const selectList = useCallback((list: TaskList) => {
-    setSelectedList(list);
+    const safeList = {
+      ...list,
+      tasks: Array.isArray(list.tasks) ? list.tasks : []
+    };
+    setSelectedList(safeList);
     setSelectedTask(null);
   }, []);
 
-  // Sélectionner une tâche
-  const selectTask = useCallback((task: Task) => {
-    setSelectedTask(task);
-  }, []);
+  // Calcul des tâches actives/terminées
+  const activeTasks = useMemo(() => (
+    selectedList?.tasks?.filter(task => !task.completed) || []
+  ), [selectedList]);
 
-  // Désélectionner une tâche
-  const deselectTask = useCallback(() => {
-    setSelectedTask(null);
-  }, []);
-
-  // Calculer les tâches actives et terminées
-  const activeTasks = selectedList?.tasks.filter(task => !task.completed) || [];
-  const completedTasks = selectedList?.tasks.filter(task => task.completed) || [];
+  const completedTasks = useMemo(() => (
+    selectedList?.tasks?.filter(task => task.completed) || []
+  ), [selectedList]);
 
   return {
     // État
@@ -202,20 +237,67 @@ export const useTaskManager = () => {
     deleteModalData,
     activeTasks,
     completedTasks,
+    isLoading,
+    error,
 
     // Actions
     createList,
     deleteList,
-    confirmDeleteList,
+    confirmDeleteList: useCallback((list: TaskList) => {
+      setDeleteModalData({
+        type: 'list',
+        item: list,
+        title: 'Confirm deletion',
+        message: `Delete list "${list.name}" and all its tasks?`
+      });
+      setShowDeleteModal(true);
+    }, []),
+    
     createTask,
     toggleTaskCompletion,
     deleteTask,
-    confirmDeleteTask,
+    confirmDeleteTask: useCallback((task: Task) => {
+      setDeleteModalData({
+        type: 'task',
+        item: task,
+        title: 'Confirm deletion',
+        message: `Delete task "${task.shortDescription}"?`
+      });
+      setShowDeleteModal(true);
+    }, []),
+    
     selectList,
-    selectTask,
-    deselectTask,
+    selectTask: useCallback((task: Task) => {
+      setSelectedTask(task);
+    }, []),
+    
+    deselectTask: useCallback(() => {
+      setSelectedTask(null);
+    }, []),
+    
     setShowCompletedTasks,
-    handleDeleteConfirm,
-    handleDeleteCancel
+    handleDeleteConfirm: useCallback(async () => {
+      if (!deleteModalData.item) return;
+
+      try {
+        if (deleteModalData.type === 'list') {
+          await deleteList(deleteModalData.item.id);
+        } else {
+          await deleteTask(deleteModalData.item.id);
+        }
+      } catch (err) {
+        console.error('Error during deletion:', err);
+      } finally {
+        setShowDeleteModal(false);
+      }
+    }, [deleteModalData, deleteList, deleteTask]),
+    
+    handleDeleteCancel: useCallback(() => {
+      setShowDeleteModal(false);
+    }, []),
+    
+    clearError: useCallback(() => {
+      setError(null);
+    }, [])
   };
 };

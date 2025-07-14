@@ -43,7 +43,7 @@ const MainPage: React.FC = () => {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Mon Application
+            Mon Gestionnaire de Tâches
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -64,10 +64,6 @@ const MainPage: React.FC = () => {
               open={Boolean(anchorEl)}
               onClose={handleClose}
             >
-              <MenuItem onClick={handleClose}>
-                <AccountCircle sx={{ mr: 1 }} />
-                Mon Profil
-              </MenuItem>
               <MenuItem onClick={handleLogout}>
                 <ExitToApp sx={{ mr: 1 }} />
                 Déconnexion

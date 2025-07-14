@@ -30,7 +30,7 @@ export interface TaskContextType {
   completedTasks: Task[];
 
   // Actions
-  createList: (name: string) => boolean;
+ createList: (name: string) => Promise<boolean>;
   deleteList: (id: string | number) => void;
   confirmDeleteList: (list: TaskList) => void;
   createTask: (task: {

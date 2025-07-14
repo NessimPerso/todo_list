@@ -31,12 +31,18 @@ export const LeftSidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [showNewListForm, setShowNewListForm] = useState(false);
   const { user } = useAuth();
-  const { lists, selectedList, selectList, confirmDeleteList } = useTaskContext();
+  const { lists, selectedList, selectList,createList , confirmDeleteList } = useTaskContext();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
   const handleNewListClick = () => setShowNewListForm(true);
   const handleNewListCancel = () => setShowNewListForm(false);
-  const handleNewListSuccess = () => setShowNewListForm(false);
+const handleNewListSuccess = async (name: string) => { 
+    const success = await createList(name); 
+    if (success) {
+      setShowNewListForm(false);
+    }
+    return success;
+  };
 
   return (
     <Box sx={{
@@ -150,23 +156,6 @@ export const LeftSidebar: React.FC = () => {
         </List>
       </Box>
 
-      {/* Footer */}
-      <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'grey.700' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton sx={{ color: 'inherit' }}>
-            <SettingsIcon />
-          </IconButton>
-          {isOpen && (
-            <Button 
-              startIcon={<LogOutIcon />}
-              sx={{ color: 'inherit', justifyContent: 'flex-start' }}
-              fullWidth
-            >
-              Déconnexion
-            </Button>
-          )}
-        </Box>
-      </Box>
     </Box>
   );
 };
