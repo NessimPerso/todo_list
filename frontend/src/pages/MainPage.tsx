@@ -1,4 +1,3 @@
-// pages/MainPage.tsx
 import React from 'react';
 import {
   Container,
@@ -16,6 +15,8 @@ import {
 import { AccountCircle, ExitToApp } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { TaskProvider } from '../context/TaskContext';
+import { TaskManager } from '../components/TaskManager';
 
 const MainPage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -36,8 +37,8 @@ const MainPage: React.FC = () => {
     handleClose();
   };
 
-  return (
-    <Box sx={{ flexGrow: 1 }}>
+ return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Header */}
       <AppBar position="static">
         <Toolbar>
@@ -76,36 +77,11 @@ const MainPage: React.FC = () => {
         </Toolbar>
       </AppBar>
       
-      {/* Contenu principal */}
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4, mb: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Bienvenue sur votre espace personnel
-          </Typography>
-          
-          <Typography variant="h6" gutterBottom>
-            Bonjour {user?.firstName} {user?.lastName} !
-          </Typography>
-          
-          <Typography variant="body1" color="text.secondary">
-            Email: {user?.email}
-          </Typography>
-          
-          <Typography variant="body1" sx={{ mt: 2 }}>
-            Vous êtes maintenant connecté à votre espace personnel.
-          </Typography>
-        </Paper>
-        
-        {/* Ajoute ici le contenu de ta page principale */}
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h5" gutterBottom>
-            Contenu de l'application
-          </Typography>
-          <Typography variant="body1">
-            Ici tu peux ajouter les fonctionnalités principales de ton application.
-          </Typography>
-        </Paper>
-      </Container>
+      <Box sx={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
+        <TaskProvider>
+          <TaskManager/>
+        </TaskProvider>
+      </Box>
     </Box>
   );
 };
