@@ -136,43 +136,50 @@ export const useTaskManager = () => {
   }, [selectedList, lists]);
 
   // Basculer l'état d'une tâche
-  const toggleTaskCompletion = useCallback(async (taskId: string | number) => {
-    if (!selectedList?.id) return;
+ const toggleTaskCompletion = useCallback(async (taskId: string | number) => {
+  if (!selectedList?.id) return;
 
-    setIsLoading(true);
-    try {
-      await api.patch(`/tasks/${taskId}/toggle-completed`);
-      
-      const updatedLists = lists.map(list => {
-        if (list.id === selectedList.id) {
-          return {
-            ...list,
-            tasks: (Array.isArray(list.tasks) ? list.tasks : []).map(task => 
-              task.id === taskId 
-                ? { ...task, completed: !task.completed } 
-                : task
-            )
-          };
-        }
-        return list;
-      });
-
-      setLists(updatedLists);
-      
-      if (selectedTask?.id === taskId) {
-        setSelectedTask(prev => 
-          prev?.id === taskId 
-            ? { ...prev, completed: !prev.completed } 
-            : prev
-        );
+  setIsLoading(true);
+  try {
+    await api.patch(`/tasks/${taskId}/toggle-completed`);
+    
+    const updatedLists = lists.map(list => {
+      if (list.id === selectedList.id) {
+        return {
+          ...list,
+          tasks: (Array.isArray(list.tasks) ? list.tasks : []).map(task => 
+            task.id === taskId 
+              ? { ...task, completed: !task.completed } 
+              : task
+          )
+        };
       }
-    } catch (err) {
-      setError('Failed to toggle task status');
-      console.error('Error toggling task:', err);
-    } finally {
-      setIsLoading(false);
+      return list;
+    });
+
+    setLists(updatedLists);
+    
+    // 🔧 FIX : Mettre à jour selectedList pour refléter les changements immédiatement
+    const updatedSelectedList = updatedLists.find(l => l.id === selectedList.id);
+    if (updatedSelectedList) {
+      setSelectedList(updatedSelectedList);
     }
-  }, [selectedList, lists, selectedTask]);
+    
+    // Mettre à jour selectedTask si c'est celle qui a été modifiée
+    if (selectedTask?.id === taskId) {
+      setSelectedTask(prev => 
+        prev?.id === taskId 
+          ? { ...prev, completed: !prev.completed } 
+          : prev
+      );
+    }
+  } catch (err) {
+    setError('Failed to toggle task status');
+    console.error('Error toggling task:', err);
+  } finally {
+    setIsLoading(false);
+  }
+}, [selectedList, lists, selectedTask]);
 
   // Supprimer une tâche
   const deleteTask = useCallback(async (taskId: string | number) => {
